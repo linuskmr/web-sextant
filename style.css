@@ -1,0 +1,74 @@
+:root {
+	color-scheme: light dark;
+}
+html {
+	font-family: Inter, sans-serif;
+	line-height: 1.5;
+}
+body {
+	margin: 0 auto;
+	padding: 10px;
+	max-width: 1024px;
+}
+
+dt {
+	font-weight: bold;
+}
+dd {
+	margin-left: 0;
+	margin-bottom: 1em;
+}
+/* Adjacent entries */
+dd + dt {
+	margin-top: 1em;
+}
+
+a:visited {
+	/* System colors, see https://developer.mozilla.org/en-US/docs/Web/CSS/system-color */
+	color: LinkText;
+}
+a.button {
+	display: inline-block;
+	padding: 0.3em 0.5em;
+	background-color: DarkSlateGray;
+	color: white;
+	text-decoration: none;
+	border-radius: 0.25em;
+	margin: 5px 0;
+}
+
+label {
+	display: block;
+	margin: 10pt 0;
+}
+input {
+	padding: 5pt;
+	border-radius: 5pt;
+	border: 1pt solid #ccc;
+}
+input[type="submit"] {
+	cursor: pointer;
+}
+
+nav ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	li {
+		display: inline-block;
+	}
+	li + li {
+		margin-left: 0.5em;
+	}
+}
+
+img {
+	max-width: 100%;
+}
+figure {
+	margin: 2em auto;
+}
+figcaption {
+	text-align: center;
+	font-style: oblique; /* Should be italic but this shows as non-italic, likely because the font has no dedicated italic style. */
+}

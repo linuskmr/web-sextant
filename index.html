@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Sextant</title>
+	<link rel="stylesheet" href="/style.css">
+	<!-- MathJax LaTeX equation rendering -->
+	<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+	<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+	<nav>
+		<ul>
+			<li>About</li>
+			<li><a href="/calculator">Calculator</a></li>
+			<li><a href="/emulator">Emulator</a></li>
+			<li><a href="/sun">Sun</a></li>
+		</ul>
+	</nav>
+
+
+<h1>Sextant</h1>
+<p>A sextant is an old nautical instrument to measure the angle between the sun and the horizon. Together with a clock, this can be used to determine the observer's position on the earth. In the following, it is first motivated why a sextant can still be useful although we have much more precise and easier ways to determine the position like GPS. Then, the sextant is introduced in more detail, limitations are mentioned and other approaches are discussed before going into the actual computations involved in determining the position using a sextant measurement. To avoid doing the computations by hand, the <a href="/calculator">sextant calculator</a> can be used, which is implemented as a <a href="https://github.com/linuskmr/sextant-rs">Rust library</a> executed in the browser via WebAssembly. The <a href="/emulator">sextant emulator</a> uses the camera and the gyroscope of the device (e.g. smartphone) to do a sextant measurement without needing a real sextant.</p>
+
+
+
+<h2>Motivation</h2>
+
+<p>
+	Today, GPS and other satellite-based systems like Galileo (EU), Glonass (Russia) and BeiDou (China) are commonly used by airplanes, ships, cars and smartphones to determine their position.
+	However, the signals of these systems can be disturbed by speical form of radio signal jamming called GPS jamming.
+	This is commonly <a href="https://www.bbc.com/news/uk-scotland-highlands-islands-43878152">used by the military</a> to prevent GPS-guided missiles to find their target.
+	Consequently, GPS jamming can be observed in conflict zones, as shown by the GPS jamming maps by <a href="https://gpsjam.org/">gpsjam.org</a> and <a href="https://www.flightradar24.com/data/gps-jamming">flightradar24.com</a>.
+	Examples include <a href="https://www.bbc.com/news/world-middle-east-68734689">GPS blocking in Israel</a>, <a href="https://www.koreatimes.co.kr/www/nation/2024/08/103_375779.html">in North Korea</a> and <a href="https://www.dlr.de/en/kn/latest/news/mysterious-gps-interference-hinders-shipping-and-air-traffic">in the Baltic Sea</a>.
+	Especially in the Baltic Sea, GPS disruptions are a <a href="https://www.bbc.com/news/articles/cne900k4wvjo">problem for airlines</a>, causing 	them to <a href="https://company.finnair.com/en/media-centre/all-releases/news?id=2568789F7B492403">stop flying to certain destinations</a> as well as for <a href="https://www.yacht.de/en/sailing-knowledge/navigation/navigation-new-gps-faults-in-the-baltic-sea/">navigation on (sailing) ships</a>.
+</p>
+
+
+
+<h2>Solution</h2>
+
+<p>
+	Since GPS jamming is threat to the safe operation of many widely-used services, a robust backup
+	solution is needed. One approach is <a href="https://en.wikipedia.org/wiki/Celestial_navigation">celestial navigation</a>, i.e. using a <b>sextant</b>. The idea was
+	proposed by John Hadley, Thomas Godfrey and Isaac Newton around the year 1731, so it can be called
+	a battle-tested technology. With the help of a sextant, the angle of the sun relative to the
+	horizon (or to a artificial horizon, a fluid-filled tube with bubble) is measured at culmination,
+	i.e. at the time of the highest point of the sun, which is around noon. Together with the time of
+	culmination from a sufficiently precise clock (<a href="https://books.google.fi/books?id=MwZZAAAAcAAJ&pg=IA2">a challenge back in the time</a>), the
+	position (latitude, longitude) can be calculated (see <a href="#calculation">Calculation</a> for details).
+	This library aims to implement these tedious and error-prone calculations.
+</p>
+
+
+
+<h2>Limitations & Other Approaches</h2>
+
+<p>
+	The accuracy of a position calculated by a sextant measurement can vary from a few
+	kilometers/miles to a several dozen kilometers/miles, depending on the accuracy of the
+	measurement. Therefore, sextant navigation is not suitable for close navigation (e.g. inside a
+	city), but rather for long-distance navigation (e.g. on the open sea). A project aiming to improve
+	the resilience of GPS in the Baltic sea is the <a href="https://www.r-mode-baltic.eu/about-r-mode-baltic/">R-Mode Baltic project</a> terrestrial positioning
+	system, which "allows positioning even in times when the Global Navigation Satellite
+	Systems (GNSS) fail."
+</p>
+
+
+
+<h2>Calculation</h2>
+
+<p>
+	This section explains how to calculate the geographic position using a sextant.
+	If you have a real sextant, you can follow the <a href="https://en.wikipedia.org/wiki/Sextant#Taking_a_sight">instructions on Wikipedia</a> or on <a href="https://www.marineinsight.com/marine-navigation/what-is-a-sextant">marineinsight.com</a> to obtain an elevation measurement before starting with the math.
+	Alternatively, the <a href="/emulator">sextant emulator</a> uses the gyroscope in your smartphone to determine the angle of the sun and automatically performs the required calcualtions.
+	The calculations for latitude (i.e. north-south position) and a longitude (i.e. east-west position) used in the geographic coordinate system (GCS) are explained separately in the sections <a href="#latitude">latitude</a> and <a href="#longitude">longitude</a>, respectively.
+	The equations in this section are based on:
+
+	<blockquote>
+		<i>General Solar Position Calculations</i> by the <abbr title="National Oceanic and Atmospheric Administration (USA)">NOAA</abbr> Global Monitoring Division, 2017.<br />
+		Retrieved from <a href="https://gml.noaa.gov/grad/solcalc/solareqns.PDF">noaa.gov</a>.
+	</blockquote>
+</p>
+
+<h3>Latitude</h3>
+
+<p>
+	The general idea for calculating the latitude, i.e. the <b>north-south position</b>, is the observation
+	that the closer you get to the equator, the higher the sun will be, i.e. the steeper the sun's
+	rays will hit the earth. This is also why it's usually warmer around the equator than at the
+	poles. Therefore, you should be able to make an educated guess whether you are close to the
+	equator or the poles based on the angle of the sun. With a sextant, you can actually measure the
+	angle between the sun compared and the horizon (<b>elevation</b>) precisely.
+</p>
+
+<h4>Sun Declination</h4>
+
+<p>
+	However, you also need to consider <b>seasons</b>: During the winter months, the sun's rays hit
+	the earth more flatly than during summer. So to actually make a calculation instead of an educated
+	guess, you would need to know the date of the measurement and compensate for the season somehow.
+	This season-dependent sun angle is called <b>sun declination</b> (\( \text{decl} \))
+	and, as you might have guessed it, can be calculated using the day of the year (\( d_y \))
+	and a trigonometric function (i.e. cos). So the <b>sun declination</b> is:
+</p>
+
+<p>\( \text{decl} = -23.45° \cdot cos(\frac{360}{365}) \cdot (d_y + 10) \)</p>
+<p>
+	with
+
+	<ul class="list-disc list-inside">
+		<li>\( s_d \): declination of the sun (i.e. the result), which can be obtained using the <a href="https://gml.noaa.gov/grad/solcalc/">NOAA Solar Calculator</a>, and</li>
+		<li>\( d_y \): day of the year (i.e. 1 ≥ \( d_y \) ≥ 365)</li>
+	</ul>
+</p>
+
+<figure>
+	<img src="sun-declination-plot.svg" alt="Sun declination plot" />
+	<figcaption>Plot of the sun declination over the days of a year.</figcaption>
+</figure>
+
+<p>
+	In this equation, you can see that the "shortest" day (i.e. winter solstice) is 10 days <i>earlier</i> than the first day of the year (1st of January).
+	This is because the shortest day of the year is around December 21st (in the northern hemisphere).
+	Also, you can see that the minimum/maximum value of disturbance ±23.45° (when the cos is 1), which is the axial tilt of the earth compared to its axis around the sun.
+	For further details about how to retrieve this formula, see the <a href="https://en.wikipedia.org/wiki/Position_of_the_Sun#Calculations">Wikipedia article about the position of the sun</a>.
+</p>
+
+<h4>Latitude Calculation</h4>
+
+<p>\( \text{lat} = 90° - (e_{s,c} - \text{decl}) \)</p>
+
+<p>
+	with
+
+	<ul class="list-disc list-inside">
+		<li>\( e_{s,c} \): elevation, i.e. measured angle between the sun and
+		the horizon at culmination</li>
+		<li>\( \text{decl} \): as the sun declination</li>
+	</ul>
+
+	To compensate for the fact that on the equator one would measure an elevation of 90° (if the sun declination is 0° at <a href="https://en.wikipedia.org/wiki/Solstice">solstice</a> for simplicity), but the equator is defined as having a latitude of 0°, we need to subtract the corrected elevation from 90°, as done in the equation above.
+</p>
+
+<h3>Longitude</h3>
+
+<p>
+	The idea for the longitude, i.e. the <b>east-west position</b>, is that the earth rotates under the sun, so
+	the sun will raise in eastern countries before it raises at western countries, which is why we have
+	time zones. For example, Helsinki/Finland uses UTC+2 while London/UK uses UTC (both in winter, i.e.
+	without daylight saving time). This way, both locations see the sun in its highest point at around
+	12 o'clock local time. So if you observe the time at which the sun was at its highest point, you can
+	calculate the difference between when you experienced the culmination and when a certain reference
+	location experienced the culmination (via a lookup for the day of the year). This difference can the
+	be used to map it to a longitude difference. Preferably, you use the prime meridian as reference,
+	because it has the longitude 0°, so your longitude difference will be the actual longitude.
+</p>
+
+<p>\( \text{lng} = (t_{c,r} - t_{c,p}) \cdot \frac{180°}{12 h} \)</p>
+<p>
+	with:
+
+	<ul class="list-disc list-inside">
+		<li>\( t_{c,r} \): time of culmination at the measurement location in <a href="#decimal-hours">decimal hours</a> (see below)</li>
+		<li>\( t_{c,p} \): <a href="#culmination-prime-meridian">time of culmination at the prime meridian</a> (see below).
+	</ul>
+</p>
+
+<h4 id="decimal-hours">Decimal hours</h4>
+
+<p>A decimal hour is a mapping of hours and minutes (i.e. hh:mm) to a decimal number, so for example 1:30 pm = 13:30 = 13.5
+hours.</p>
+
+<p>\( t_h + \frac{t_m}{60 \frac{min}{h}} \)</p>
+<p>
+	with
+
+	<ul class="list-disc list-inside">
+		<li>\( t_h \): The hour part of the time value</li>
+		<li>\( t_m \): The minute part of the time value</li>
+	</ul>
+</p>
+<p>Example:</p>
+<p>Consider the time 1:04 pm = 13:04, i.e. \( t_h = 13 \) and \( t_m = 4 \):</p>
+<p>\( t_h + \frac{t_m}{60 \frac{min}{h}} = 13 \; h + \frac{4 \\; min}{60 \frac{min}{h}} = \frac{13 \; h \cdot 60 \frac{min}{h}}{60 \frac{min}{h}} + \frac{4 \; min}{60 \frac{min}{h}} = \frac{784 \; min}{60 \frac{min}{h}} = \frac{196}{15} h = 13.0 \bar{6} h \)</p>
+
+
+<h4 id="culmination-prime-meridian" class="text-xl font-bold mt-5 mb-1">Culmination at Prime Meridian</h4>
+
+<p><b>Fractional Year</b>:</p>
+
+
+<p>\( \gamma = \frac{2 * \pi}{365} * (d_y - 1 + \frac{h - 12}{24}) \)</p>
+
+<p>
+	with
+
+	<ul class="list-disc list-inside">
+		<li>\( d_y \): Day of the year</li>
+		<li>\( h \): Fractional hour. In our case, this equals to 12, which eliminates the fraction to 0.</li>
+	</ul>
+</p>
+
+
+<p><b>Equation of Time (in Minutes)</b>:</p>
+
+<p>\( \text{eqtime} = 229.18 \cdot ( 0.000075 + 0.001868 \cdot \\cos(\gamma) - 0.032077 \cdot \sin(\\gamma) - 0.014615 \cdot \cos(2\gamma) - 0.040849 \cdot \sin(2\gamma) ) \)</p>
+
+
+<p><b>Time Offset</b>:</p>
+
+
+<p>\( \text{time_offset} = \text{eqtime} + 4 \cdot \text{longitude} - 60 \cdot \text{timezone} \)</p>
+
+<p>
+	with
+
+	<ul class="list-disc list-inside">
+		<li>timezone: Timezone offset in fractional hours from UTC.</li>
+	</ul>
+</p>
+
+
+<p><b>Time of Solar Noon (in Minutes)</b>:</p>
+
+<p>\( \text{tst} = \text{hr} \cdot 60 + \text{mn} + \frac{\text{sc}}{60} + \text{time_offset} \)</p>
+</body>
+</html>

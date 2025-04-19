@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Sextant Calculator</title>
+	<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+	<nav>
+		<ul>
+			<li><a href="/">About</a></li>
+			<li>Calculator</li>
+			<li><a href="/emulator">Emulator</a></li>
+			<li><a href="/sun">Sun</a></li>
+		</ul>
+	</nav>
+
+	<h1>Sextant Calculator</h1>
+
+	<p>Calculate your location using a sextant measurement.</p>
+
+	<form id="measurement-form" action="/result">
+		<label>
+			Elevation (Angle)<br>
+			<input type="number" id="elevation-angle" name="elevation-angle" required>
+		</label>
+
+		<label>Measurement Timestamp<br>
+			<!--
+			The form field `#datetime-input` has no name attribute, so it is not sent in the form submission.
+			Instead, there is a `hidden` field `#timestamp` with a ISO 8601 UTC timestamp that gets sent.
+			On form submission, it is set from the value of `#datetime-input` and the value of `#timezone-input`.
+			-->
+			<input type="datetime-local" id="datetime-input" required>
+		</label>
+
+		<label>Timezone (UTC Offset)<br>
+			<input type="text" id="timezone-input" name="timezone" maxlength="6" size="6" pattern="[+\-]\d\d:\d\d" title="±hh:mm" autocomplete="off" required>
+		</label>
+
+		<input type="hidden" id="timestamp" name="timestamp">
+
+		<input type="submit" value="Calculate">
+	</form>
+
+
+	<script>
+		// Fill input fields with current date, time and timezone
+		const now = new Date()
+		document.getElementById("datetime-input").value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}T${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
+
+		const timezoneOffsetSign = (now.getTimezoneOffset() > 0) ? "-" : "+" // Weirdly, returns how to get UTC from local time, not how to get from UTC to local time as done in ISO 8601 strings
+		const timezoneOffsetHours = Math.abs(now.getTimezoneOffset()) / 60
+		const timezoneOffsetMinutes = Math.abs(now.getTimezoneOffset()) % 60
+		document.getElementById("timezone-input").value = `${timezoneOffsetSign}${String(timezoneOffsetHours).padStart(2, "0")}:${String(timezoneOffsetMinutes).padStart(2, "0")}`
+
+		document.getElementById("measurement-form").addEventListener("submit", event => {
+			// Do NOT call `event.preventDefault()` here, because we want the form to be submitted later
+
+			// Parse the date as UTC (`+ "Z"` trick) and add the timezone offset manually
+			const timestamp = new Date(document.getElementById("datetime-input").value + "Z")
+
+			const timezone = document.getElementById("timezone-input").value
+			const timezoneRegex = /^([+\-])(\d\d):(\d\d)$/
+			const timezoneMatch = timezone.match(timezoneRegex)
+			const timezoneOffsetMinutes = (parseInt(timezoneMatch[2]) * 60 + parseInt(timezoneMatch[3])) * (timezoneMatch[1] === "-" ? +1 : -1)
+			timestamp.setMinutes(timestamp.getMinutes() + timezoneOffsetMinutes)
+
+			document.getElementById("timestamp").value = timestamp.toISOString()
+		})
+	</script>
+
+	</body>
+</html>

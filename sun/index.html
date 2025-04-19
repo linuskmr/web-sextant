@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Sun Calculator</title>
+	<link rel="stylesheet" href="/style.css">
+	<script src="index.js" defer></script>
+</head>
+<body>
+	<nav>
+		<ul>
+			<li><a href="/">About</a></li>
+			<li><a href="/calculator">Calculator</a></li>
+			<li><a href="/emulator">Emulator</a></li>
+			<li>Sun</li>
+		</ul>
+	</nav>
+
+	<h1>Sun Calculator</h1>
+	<p><small>Adapted from <a href="https://gml.noaa.gov/grad/solcalc/solareqns.PDF">NOAA's General Solar Position Calculations</a> and the <a href="https://gml.noaa.gov/grad/solcalc/">NOAA Solar Calculator</a>.</small></p>
+
+	<form id="coordinateForm" style="border: 1px solid; border-radius: 1em; padding: 1em;">
+		<label for="date">
+			Date<br>
+			<input type="date" id="date" name="date" required>
+		</label>
+
+		<small>Coordinates are automatically inferred from geolocation if available.</small>
+
+        <label for="latitude">
+			Latitude<br>
+			<input type="number" id="latitude" name="latitude" required>
+		</label>
+
+        <label for="longitude">
+			Longitude<br>
+			<input type="number" id="longitude" name="longitude" required>
+		</label>
+    </form>
+
+	<div id="results"></div>
+</body>
+</html>
