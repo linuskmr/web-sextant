@@ -29,7 +29,7 @@
 		<dd>
 			<span id="latitude"></span> <span id="latitude-hemisphere"></span><br>
 			<span id="longitude"></span> <span id="longitude-hemisphere"></span><br>
-			<a class="button" href="https://www.google.de/maps/@53.9801828,7.848542,232401m/">Open in Google Maps ↗</a></dd>
+			<a id="google-maps-location-link" class="button" href="">Open in Google Maps ↗</a></dd>
 	</dl>
 
 	<script type="module">
@@ -55,6 +55,8 @@
 		document.getElementById("latitude-hemisphere").innerText = measurementResult.latitude_hemisphere
 		document.getElementById("longitude").innerText = `${sextantWasm.deg_to_degrees_fraction(measurementResult.longitude_angle).toString().padStart(3, "0")}° ${sextantWasm.deg_to_minutes_fraction(measurementResult.longitude_angle).toString().padStart(2, "0")}' ${sextantWasm.deg_to_seconds_fraction(measurementResult.longitude_angle).toFixed(0).padStart(2, "0")}"`
 		document.getElementById("longitude-hemisphere").innerText = measurementResult.longitude_hemisphere
+
+		document.getElementById("google-maps-location-link").href = `http://maps.google.com/maps?q=loc:${measurementResult.latitude_angle},${measurementResult.longitude_angle}`
 	</script>
 
 	</body>
